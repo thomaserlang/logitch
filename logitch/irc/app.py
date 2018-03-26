@@ -44,10 +44,8 @@ def message(nick, target, message, **kwargs):
 
 @bot.on('CLEARCHAT')
 def clearchat(channel, banned_user, **kwargs):
-    logging.info(kwargs)
     if 'ban-reason' not in kwargs:
         return
-
     type_ = 2
     if 'ban-duration' in kwargs:
         type_ = 3
