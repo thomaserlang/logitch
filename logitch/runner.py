@@ -1,5 +1,3 @@
-import logging
-import sys
 import click
 from logitch import config, config_load, logger
 
