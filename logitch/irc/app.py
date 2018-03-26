@@ -76,7 +76,13 @@ def main():
     bot.port = config['irc']['port'] 
     bot.ssl = config['irc']['use_ssl']
     bot.raw_handlers = [rfc2812_handler(bot)]
-    bot.conn = sa.create_engine(config['irc']['sql_url'])
+    bot.conn = sa.create_engine(config['irc']['sql_url'],
+        convert_unicode=True,
+        echo=False,
+        pool_recycle=3599,
+        encoding='UTF-8',
+        connect_args={'charset': 'utf8mb4'},
+    )
     bot.loop.create_task(bot.connect())
     bot.loop.run_forever()
 
