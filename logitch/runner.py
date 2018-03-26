@@ -14,7 +14,7 @@ def cli(config, log_path, log_level):
 
 @cli.command()
 def irc():
-    logger.set_logger('irc')
+    logger.set_logger('irc.log')
     import logitch.irc.app
     logitch.irc.app.main()
 
