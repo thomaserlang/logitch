@@ -12,6 +12,7 @@ setup(
     description='',
     long_description=__doc__,
     packages=['logitch'],
+    package_dir={'': '.'},
     zip_safe=False,
     install_requires=install_requires,
     license=None,
