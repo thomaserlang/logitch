@@ -112,7 +112,7 @@ def App():
 
 def main():
     app = App()
-    app.listen(8001)
+    app.listen(config['web_port'])
     app.conn = sa.create_engine(config['sql_url'],
         convert_unicode=True,
         echo=False,

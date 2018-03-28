@@ -9,7 +9,7 @@ config = {
     'client_secret': '',
     'cookie_secret': '',
     'redirect_uri': '',
-    'web_port': '',
+    'web_port': 8001,
     'irc': {
         'host': 'irc.chat.twitch.tv',
         'port': 6697,
