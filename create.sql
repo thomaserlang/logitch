@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS `logitch`.`entries` (
   INDEX `ix_entries_channel_user` (`channel` ASC, `user` ASC, `type` ASC))
 ENGINE = InnoDB;
 
-
 CREATE TABLE IF NOT EXISTS `logitch`.`usernames` (
   `user_id` INT UNSIGNED NOT NULL,
   `user` VARCHAR(45) NULL,
@@ -51,6 +50,7 @@ BEGIN
 		WHEN new.`type` = 2 THEN insert into user_stats (channel, user_id, bans) VALUES (new.channel, new.user_id, 1) ON DUPLICATE KEY UPDATE bans=bans+1;
         WHEN new.`type` = 3 THEN insert into user_stats (channel, user_id, timeouts) VALUES (new.channel, new.user_id, 1) ON DUPLICATE KEY UPDATE timeouts=timeouts+1;
         WHEN new.`type` = 4 THEN insert into user_stats (channel, user_id, purges) VALUES (new.channel, new.user_id, 1) ON DUPLICATE KEY UPDATE purges=purges+1;
+		ELSE BEGIN END;
     END CASE;
 END$$
 

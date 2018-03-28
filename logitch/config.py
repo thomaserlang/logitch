@@ -1,15 +1,16 @@
 import os, yaml
 
 config = {
+    'user': '',
+    'token': '',
+    'sql_url': '',
+    'channels': '',
     'irc': {
-        'username': '',
-        'password': '',
-        'host': '',
-        'port': 6667,
-        'use_ssl': False,
-        'channels': [],
-        'sql_url': '',
-    },    
+        'host': 'irc.chat.twitch.tv',
+        'port': 6697,
+        'use_ssl': True,
+    },
+    'pubsub_url': 'wss://pubsub-edge.twitch.tv',
     'logging': {
         'level': 'warning',
         'path': None,

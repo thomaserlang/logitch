@@ -8,7 +8,7 @@ def unpack_command(msg):
     if command in ["PING", "ERR_NOMOTD"]:
         kwargs["message"] = params[-1]
 
-    elif command in ["PRIVMSG", "NOTICE"]:
+    elif command in ["PRIVMSG", "NOTICE", "WHISPER"]:
         unpack.nickmask(prefix, kwargs)
         kwargs["target"] = params[0]
         kwargs["message"] = params[-1]

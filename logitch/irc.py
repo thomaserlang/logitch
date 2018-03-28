@@ -1,18 +1,19 @@
 import bottom, asyncio, logging
 import sqlalchemy as sa
 from datetime import datetime
-from logitch.irc.unpack import rfc2812_handler
+from logitch.unpack import rfc2812_handler
 from logitch import config
 
 bot = bottom.Client('a', 0)
+room_mods = {}
 
 @bot.on('CLIENT_CONNECT')
 async def connect(**kwargs):
-    logging.info('Connecting')
-    if config['irc']['password']:
-        bot.send('PASS', password=config['irc']['password'])
-    bot.send('NICK', nick=config['irc']['username'])
-    bot.send('USER', user=config['irc']['username'], realname=config['irc']['username'])
+    logging.info('IRC Connecting to {}:{}'.format(config['irc']['host'], config['irc']['port']))
+    if config['token']:
+        bot.send('PASS', password='oauth:{}'.format(config['token']))
+    bot.send('NICK', nick=config['user'])
+    bot.send('USER', user=config['user'], realname=config['user'])
 
     # Don't try to join channels until the server has
     # sent the MOTD, or signaled that there's no MOTD.
@@ -31,7 +32,7 @@ async def connect(**kwargs):
     for future in pending:
         future.cancel()
 
-    for channel in config['irc']['channels']:
+    for channel in config['channels']:
         bot.send('JOIN', channel='#'+channel.strip('#'))
 
 @bot.on('PING')
@@ -52,6 +53,22 @@ def clearchat(channel, banned_user, **kwargs):
         if kwargs['ban-duration'] == '1':
             type_ = 4
     save(type_, channel, kwargs['room-id'], banned_user, kwargs['target-user-id'], kwargs['ban-reason'])
+
+@bot.on('NOTICE')
+def notice(target, message, **kwargs):
+    if 'msg-id' not in kwargs:
+        return
+
+    if kwargs['msg-id'] == 'room_mods':
+        a = message.split(':')
+        mods = []
+        if len(a) == 2:
+            mods = [b.strip() for b in a[1].split(',')]
+        mods.append(target)
+        room_mods[target] = mods
+
+def send_whisper(nick, target, message):
+    bot.send('PRIVMSG', target=target, message='/w {} {}'.format(nick, message))
 
 def save(type_, channel, room_id, user, user_id, message):
     logging.debug('{} {} {} {}'.format(type_, channel, user, message))
@@ -76,19 +93,11 @@ def main():
     bot.port = config['irc']['port'] 
     bot.ssl = config['irc']['use_ssl']
     bot.raw_handlers = [rfc2812_handler(bot)]
-    bot.conn = sa.create_engine(config['irc']['sql_url'],
+    bot.conn = sa.create_engine(config['sql_url'],
         convert_unicode=True,
         echo=False,
         pool_recycle=3599,
         encoding='UTF-8',
         connect_args={'charset': 'utf8mb4'},
     )
-    bot.loop.create_task(bot.connect())
-    bot.loop.run_forever()
-
-if __name__ == '__main__':
-    from logitch import config_load, logger
-    config_load()    
-    logger.set_logger('irc.log')
-    main()
-    
+    return bot
