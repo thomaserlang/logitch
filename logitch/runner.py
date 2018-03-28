@@ -14,7 +14,7 @@ def cli(config, log_path, log_level):
         config['logging']['level'] = log_level
 
 @cli.command()
-def logger():
+def log():
     logger.set_logger('logitch.log')
 
     loop = asyncio.get_event_loop()
