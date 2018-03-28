@@ -35,7 +35,7 @@ class Handler(web.RequestHandler):
             args['created_at'] = context
         if sql:
             logs = self.application.conn.execute(
-                sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY created_at DESC LIMIT 100;'), 
+                sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;'), 
                 args
             )
         self.render('base.html', logs=logs, render_type=self.render_type)
