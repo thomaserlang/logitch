@@ -3,3 +3,4 @@ pyyaml==3.12
 sqlalchemy==1.2.5
 click==6.7
 requests==2.18.4
+websockets==4.0.1
