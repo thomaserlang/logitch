@@ -5,6 +5,11 @@ config = {
     'token': '',
     'sql_url': '',
     'channels': '',
+    'client_id': '',
+    'client_secret': '',
+    'cookie_secret': '',
+    'redirect_uri': '',
+    'web_port': '',
     'irc': {
         'host': 'irc.chat.twitch.tv',
         'port': 6697,

@@ -4,3 +4,4 @@ sqlalchemy==1.2.5
 click==6.7
 requests==2.18.4
 websockets==4.0.1
+tornado==5.0.1
