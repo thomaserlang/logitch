@@ -104,7 +104,7 @@ def App():
             (r'/oauth', OAuth_handler),
         ], 
         login_url='/login', 
-        debug=True, 
+        debug=config['debug'], 
         cookie_secret=config['cookie_secret'],
         template_path=os.path.join(os.path.dirname(__file__), 'templates'),
         autoescape=None,

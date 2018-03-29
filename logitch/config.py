@@ -1,6 +1,7 @@
 import os, yaml
 
 config = {
+    'debug': False,
     'user': '',
     'token': '',
     'sql_url': '',
