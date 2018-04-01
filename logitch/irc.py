@@ -7,8 +7,13 @@ from logitch import config
 bot = bottom.Client('a', 0)
 room_mods = {}
 
+bot.pong_check_callback = None
+bot.ping_callback = None
+
 @bot.on('CLIENT_CONNECT')
 async def connect(**kwargs):
+    if bot.pong_check_callback:
+        bot.pong_check_callback.cancel()
     logging.info('IRC Connecting to {}:{}'.format(config['irc']['host'], config['irc']['port']))
     if config['token']:
         bot.send('PASS', password='oauth:{}'.format(config['token']))
@@ -35,9 +40,43 @@ async def connect(**kwargs):
     for channel in config['channels']:
         bot.send('JOIN', channel='#'+channel.strip('#'))
 
+    if bot.pong_check_callback:
+        bot.pong_check_callback.cancel()
+    if bot.ping_callback:
+        bot.ping_callback.cancel()
+    bot.ping_callback = asyncio.ensure_future(send_ping())
+
+async def send_ping():
+    await asyncio.sleep(random.randint(120, 240))
+    logging.debug('Sending ping')
+    bot.pong_check_callback = asyncio.ensure_future(wait_for_pong())
+    bot.send('PING')
+
+async def wait_for_pong():
+    await asyncio.sleep(10)
+    logging.error('Didn\'t receive a PONG in time, reconnecting')
+    if bot.ping_callback:
+        bot.ping_callback.cancel()
+    bot.ping_callback = asyncio.ensure_future(send_ping())
+    await bot.connect()
+
+@bot.on('CLIENT_DISCONNECT')
+async def disconnect(**kwargs):
+    logging.info('Disconnected')
+
 @bot.on('PING')
 def keepalive(message, **kwargs):
+    logging.debug('Received ping, sending PONG back')
     bot.send('PONG', message=message)
+
+@bot.on('PONG')
+async def pong(message, **kwargs):
+    logging.debug('Received pong')
+    if bot.pong_check_callback:
+        bot.pong_check_callback.cancel()
+    if bot.ping_callback:
+        bot.ping_callback.cancel()
+    bot.ping_callback = asyncio.ensure_future(send_ping())
 
 @bot.on('PRIVMSG')
 def message(nick, target, message, **kwargs):
@@ -101,3 +140,11 @@ def main():
         connect_args={'charset': 'utf8mb4'},
     )
     return bot
+
+if __name__ == '__main__':
+    from logitch import config_load, logger
+    config_load()    
+    logger.set_logger('irc.log')
+    loop = asyncio.get_event_loop()
+    loop.create_task(main().connect())    
+    loop.run_forever()

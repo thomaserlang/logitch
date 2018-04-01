@@ -5,7 +5,7 @@ def unpack_command(msg):
     prefix, command, params = unpack.split_line(msg.strip())
     command = unpack.synonym(command)
     kwargs = {}  # type: Dict[str, Any]
-    if command in ["PING", "ERR_NOMOTD"]:
+    if command in ["PING", "PONG", "ERR_NOMOTD"]:
         kwargs["message"] = params[-1]
 
     elif command in ["PRIVMSG", "NOTICE", "WHISPER"]:
