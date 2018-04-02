@@ -1,4 +1,4 @@
-import bottom, asyncio, logging
+import bottom, asyncio, logging, random
 import sqlalchemy as sa
 from datetime import datetime
 from logitch.unpack import rfc2812_handler
