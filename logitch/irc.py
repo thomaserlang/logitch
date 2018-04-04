@@ -87,11 +87,14 @@ def clearchat(channel, banned_user, **kwargs):
     if 'ban-reason' not in kwargs:
         return
     type_ = 2
+    message = '<Banned. Reason: {}>'.format(kwargs['ban-reason'])
     if 'ban-duration' in kwargs:
         type_ = 3
+        message = '<Timeout. Duration: {}. Reason: {}>'.format(kwargs['ban-duration'], kwargs['ban-reason'])
         if kwargs['ban-duration'] == '1':
+            message = '<Purge. Reason: {}>'.format(kwargs['ban-duration'], kwargs['ban-reason'])
             type_ = 4
-    save(type_, channel, kwargs['room-id'], banned_user, kwargs['target-user-id'], kwargs['ban-reason'])
+    save(type_, channel, kwargs['room-id'], banned_user, kwargs['target-user-id'], message)
 
 @bot.on('NOTICE')
 def notice(target, message, **kwargs):

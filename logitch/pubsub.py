@@ -55,7 +55,7 @@ class Pubsub():
             'room_id': c[2],
             'user': data['args'][0],
             'user_id': data['target_user_id'],
-            'message': 'Mod action by {}[{}]: {} {}'.format(
+            'message': '<Mod action by {}[{}]: {} {}>'.format(
                 data['created_by'], 
                 data['created_by_user_id'],
                 data['moderation_action'],
