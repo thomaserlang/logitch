@@ -51,7 +51,7 @@ class Pubsub():
         '''), {
             'type': 100,
             'created_at': datetime.utcnow(),
-        'channel': self.channel_lookup[c[2]],
+            'channel': self.channel_lookup[c[2]],
             'room_id': c[2],
             'user': data['args'][0],
             'user_id': data['target_user_id'],
