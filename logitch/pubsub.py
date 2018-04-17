@@ -53,7 +53,7 @@ class Pubsub():
             'created_at': datetime.utcnow(),
         'channel': self.channel_lookup[c[2]],
             'room_id': c[2],
-            'user': data['args'],
+            'user': data['args'][0],
             'user_id': data['target_user_id'],
             'message': '<{}{} (by {})>'.format(
                 data['moderation_action'],
