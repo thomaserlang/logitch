@@ -53,11 +53,11 @@ class Pubsub():
             'created_at': datetime.utcnow(),
         'channel': self.channel_lookup[c[2]],
             'room_id': c[2],
-            'user': data['args'][0],
+            'user': data['args'].pop(0),
             'user_id': data['target_user_id'],
-            'message': '/{} {} (By {})'.format(
+            'message': '<{}{} (by {})>'.format(
                 data['moderation_action'],
-                ' '.join(data['args']),
+                ' '+' '.join(data['args']).strip() if data['args'] else '',
                 data['created_by'],
             ),
         }) 
