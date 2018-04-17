@@ -55,11 +55,10 @@ class Pubsub():
             'room_id': c[2],
             'user': data['args'][0],
             'user_id': data['target_user_id'],
-            'message': '<{} {} (By {}[{}])>'.format(
+            'message': '/{} {} (By {})'.format(
                 data['moderation_action'],
                 ' '.join(data['args']),
-                data['created_by'], 
-                data['created_by_user_id'],
+                data['created_by'],
             ),
         }) 
 
