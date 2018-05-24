@@ -41,7 +41,8 @@ class Pubsub():
             await self.log_mod_action(message['data']['topic'], m['data'])
 
     async def log_mod_action(self, topic, data):
-        logging.info(data['moderation_action'])
+        if 'moderation_action' not in data:
+            return
         c = topic.split('.')
         try:
             self.conn.execute(sa.sql.text('''
