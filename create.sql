@@ -1,7 +1,3 @@
-SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
-SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
-SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
-
 CREATE SCHEMA IF NOT EXISTS `logitch` DEFAULT CHARACTER SET utf8mb4 ;
 USE `logitch` ;
 
@@ -18,10 +14,11 @@ CREATE TABLE IF NOT EXISTS `logitch`.`entries` (
   INDEX `ix_entries_channel_user` (`channel` ASC, `user` ASC, `type` ASC))
 ENGINE = InnoDB;
 
+
 CREATE TABLE IF NOT EXISTS `logitch`.`usernames` (
   `user_id` INT UNSIGNED NOT NULL,
-  `user` VARCHAR(45) NULL,
-  PRIMARY KEY (`user_id`))
+  `user` VARCHAR(45) NOT NULL,
+  PRIMARY KEY (`user_id`, `user`))
 ENGINE = InnoDB;
 
 
@@ -33,6 +30,21 @@ CREATE TABLE IF NOT EXISTS `logitch`.`user_stats` (
   `purges` INT(3) NULL DEFAULT 0,
   `chat_messages` INT NULL DEFAULT 0,
   PRIMARY KEY (`user_id`, `channel`))
+ENGINE = InnoDB;
+
+
+CREATE TABLE IF NOT EXISTS `logitch`.`modlogs` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `created_at` DATETIME NULL,
+  `channel` VARCHAR(45) NULL,
+  `user_id` INT NULL,
+  `user` VARCHAR(45) NULL,
+  `command` VARCHAR(45) NULL,
+  `args` VARCHAR(500) NULL,
+  `target_user` VARCHAR(45) NULL,
+  `target_user_id` INT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `ix_modlogs_channel_user` (`channel` ASC, `user` ASC))
 ENGINE = InnoDB;
 
 USE `logitch`;
@@ -56,7 +68,3 @@ END$$
 
 
 DELIMITER ;
-
-SET SQL_MODE=@OLD_SQL_MODE;
-SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
-SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;

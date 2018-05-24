@@ -38,29 +38,45 @@ class Pubsub():
             await self.ws.close()
         elif message['type'] == 'MESSAGE':
             m = json.loads(message['data']['message'])
-            if m['data']['type'] == 'chat_login_moderation':
-                await self.log_mod_action(message['data']['topic'], m['data'])
+            await self.log_mod_action(message['data']['topic'], m['data'])
 
     async def log_mod_action(self, topic, data):
-        if data['moderation_action'] not in ['ban', 'timeout', 'unban']:
-            return
+        logging.info(data['moderation_action'])
         c = topic.split('.')
-        self.conn.execute(sa.sql.text('''
-            INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message) VALUES
-                (:type, :created_at, :channel, :room_id, :user, :user_id, :message)
-        '''), {
-            'type': 100,
-            'created_at': datetime.utcnow(),
-            'channel': self.channel_lookup[c[2]],
-            'room_id': c[2],
-            'user': data['args'][0],
-            'user_id': data['target_user_id'],
-            'message': '<{}{} (by {})>'.format(
-                data['moderation_action'],
-                ' '+' '.join(data['args']).strip() if data['args'] else '',
-                data['created_by'],
-            ),
-        }) 
+        try:
+            self.conn.execute(sa.sql.text('''
+                INSERT INTO modlogs (created_at, channel, user, user_id, command, args, target_user, target_user_id) VALUES
+                    (:created_at, :channel, :user, :user_id, :command, :args, :target_user, :target_user_id)
+            '''), {
+                'created_at': datetime.utcnow(),
+                'channel': self.channel_lookup[c[2]],
+                'user': data['created_by'],
+                'user_id': data['created_by_user_id'],
+                'command': data['moderation_action'],
+                'args': ' '.join(data['args']).strip() if data['args'] else '',
+                'target_user': data['args'][0] if data['target_user_id'] else None,
+                'target_user_id': data['target_user_id'] if data['target_user_id'] else None,
+            }) 
+
+            if data['target_user_id']:
+                self.conn.execute(sa.sql.text('''
+                    INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message) VALUES
+                        (:type, :created_at, :channel, :room_id, :user, :user_id, :message)
+                '''), {
+                    'type': 100,
+                    'created_at': datetime.utcnow(),
+                    'channel': self.channel_lookup[c[2]],
+                    'room_id': c[2],
+                    'user': data['args'][0],
+                    'user_id': data['target_user_id'],
+                    'message': '<{}{} (by {})>'.format(
+                        data['moderation_action'],
+                        ' '+' '.join(data['args']).strip() if data['args'] else '',
+                        data['created_by'],
+                    ),
+                }) 
+        except:
+            logging.exception('log_mod_action')
 
     async def run(self):
         while True:
@@ -155,3 +171,11 @@ def main():
         token=config['token'],
     )
     return app
+
+if __name__ == '__main__':
+    from logitch import config_load, logger
+    config_load()    
+    logger.set_logger('pubsub.log')
+    loop = asyncio.get_event_loop()
+    loop.create_task(main().run())    
+    loop.run_forever()
