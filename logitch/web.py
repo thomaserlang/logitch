@@ -14,16 +14,20 @@ class Authenticated_handler(web.RequestHandler):
             return
         return json.loads(escape.native_str(data))
 
-class Handler(web.RequestHandler):
+class Handler(Authenticated_handler):
 
+    @web.authenticated
     def get(self):
-        channel = self.get_argument('channel', None)
-        user = self.get_argument('user', None)
+        mod_of_channels = self.get_mod_of_channels()
+        channel = self.get_argument('channel', '').lower()
+        user = self.get_argument('user', '').lower()
         context = self.get_argument('context', None)
         logs = []
         sql = None
         args = {}
         if channel:
+            if channel not in mod_of_channels:
+                raise web.HTTPError(403, 'You are not a moderator of this channel')
             sql = 'channel=:channel'
             args['channel'] = channel
         if channel and user:
@@ -33,12 +37,16 @@ class Handler(web.RequestHandler):
             sql += ' AND created_at<=:created_at'
             logging.info(context)
             args['created_at'] = context
-        if sql:
+        if sql and channel:
             logs = self.application.conn.execute(
                 sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;'), 
                 args
             )
-        self.render('base.html', logs=logs, render_type=self.render_type)
+        self.render('base.html', 
+            logs=logs, 
+            render_type=self.render_type,
+            mod_of_channels=mod_of_channels,
+        )
 
     def render_type(self, type_):
         if type_ == 1:
@@ -52,16 +60,27 @@ class Handler(web.RequestHandler):
         if type_ == 100:
             return '<span class="badge badge-success" title="An action by a mod concerning this user.">M</span>'
 
+    def get_mod_of_channels(self):
+        q = self.application.conn.execute(
+            sa.sql.text('SELECT * FROM mods WHERE user_id=:user_id;'), 
+            {'user_id': self.current_user['user_id']}
+        )
+        rows = q.fetchall()
+        return [r['channel'] for r in rows]
+
 class Login_handler(web.RequestHandler):
 
     def get(self):
-        self.redirect('https://id.twitch.tv/oauth2/authorize?'+parse.urlencode({
-                'client_id': config['client_id'],
-                'response_type': 'code',
-                'redirect_uri': config['redirect_uri'],
-                'scope': '',
-            })
-        )
+        if self.current_user:
+            self.redirect('/')
+        else:
+            self.redirect('https://id.twitch.tv/oauth2/authorize?'+parse.urlencode({
+                    'client_id': config['client_id'],
+                    'response_type': 'code',
+                    'redirect_uri': config['redirect_uri'],
+                    'scope': '',
+                })
+            )
 
 class OAuth_handler(web.RequestHandler):
 
@@ -75,7 +94,6 @@ class OAuth_handler(web.RequestHandler):
             'redirect_uri': config['redirect_uri'],
             'grant_type': 'authorization_code',
         }), body='', method='POST', raise_error=False)
-        logging.info(response.body)
         if response.code != 200:
             logging.error(response.body)
             self.write('Unable to verify you at Twitch, please try again.')

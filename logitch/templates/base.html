@@ -12,7 +12,16 @@
 <body>
     <div style="padding: 10px; background-color:#36c;">
         <form class="form-inline" style="margin:0;">
-            <input name="channel" class="form-control" type="text" placeholder="Channel" value="{{escape(handler.get_argument('channel', ''))}}" />
+            <select name="channel" class="form-control">
+                <option value="" disabled selected>Choose a channel</option>
+            {% for channel in mod_of_channels %}
+                <option 
+                    value="{{escape(channel)}}" 
+                    {%if channel == handler.get_argument('channel', '') %}selected{% end %}>
+                    {{escape(channel)}}
+                </option>
+            {% end %}
+            </select>
             <input name="user" class="form-control" type="text" placeholder="User" value="{{escape(handler.get_argument('user', ''))}}" />
             <button type="submit" class="btn btn-info">Search</button>
         </form>
