@@ -1,5 +1,6 @@
 import bottom, asyncio, logging, random, aiohttp
 import sqlalchemy as sa
+from sqlalchemy_aio import ASYNCIO_STRATEGY
 from datetime import datetime
 from logitch.unpack import rfc2812_handler
 from logitch import config
@@ -79,8 +80,10 @@ async def pong(message, **kwargs):
     bot.ping_callback = asyncio.ensure_future(send_ping())
 
 @bot.on('PRIVMSG')
-def message(nick, target, message, **kwargs):
-    save(1, target, kwargs['room-id'], nick, kwargs['user-id'], message)
+async def message(nick, target, message, **kwargs):
+    bot.loop.create_task(
+        save(1, target, kwargs['room-id'], nick, kwargs['user-id'], message)
+    )
 
     if not message.startswith('!'):
         return
@@ -91,7 +94,7 @@ def message(nick, target, message, **kwargs):
         bot.send("PRIVMSG", target=target, message='Affirmative, {}'.format(nick))
 
 @bot.on('CLEARCHAT')
-def clearchat(channel, banned_user, **kwargs):
+async def clearchat(channel, banned_user, **kwargs):
     if 'ban-reason' not in kwargs:
         return
     type_ = 2
@@ -103,7 +106,9 @@ def clearchat(channel, banned_user, **kwargs):
         if kwargs['ban-duration'] == '1':
             message = '<Purge. Reason: {}>'.format(reason)
             type_ = 4
-    save(type_, channel, kwargs['room-id'], banned_user, kwargs['target-user-id'], message)
+    bot.loop.create_task(
+        save(type_, channel, kwargs['room-id'], banned_user, kwargs['target-user-id'], message)
+    )
 
 @bot.on('NOTICE')
 async def notice(target, message, **kwargs):
@@ -133,10 +138,10 @@ async def save_mods(target, message):
             'user_id': u['id'],
             'user': u['user'],
         })
-    bot.conn.execute(sa.sql.text('DELETE FROM mods WHERE channel=:channel;'), {
+    await bot.conn.execute(sa.sql.text('DELETE FROM mods WHERE channel=:channel;'), {
         'channel': channel,
     })
-    bot.conn.execute(
+    await bot.conn.execute(
         sa.sql.text('INSERT INTO mods (channel, user_id, user) VALUES (:channel, :user_id, :user);'), 
         data
     )
@@ -157,10 +162,10 @@ async def lookup_usernames(usernames):
 def send_whisper(nick, target, message):
     bot.send('PRIVMSG', target=target, message='/w {} {}'.format(nick, message))
 
-def save(type_, channel, room_id, user, user_id, message):
+async def save(type_, channel, room_id, user, user_id, message):
     logging.debug('{} {} {} {}'.format(type_, channel, user, message))
     try:
-        bot.conn.execute(sa.sql.text('''
+        await bot.conn.execute(sa.sql.text('''
             INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message, word_count) VALUES
                 (:type, :created_at, :channel, :room_id, :user, :user_id, :message, :word_count)
         '''), {
@@ -187,6 +192,7 @@ def main():
         pool_recycle=3599,
         encoding='UTF-8',
         connect_args={'charset': 'utf8mb4'},
+        strategy=ASYNCIO_STRATEGY,
     )
     bot.http_session = None
     bot.pong_check_callback = None
