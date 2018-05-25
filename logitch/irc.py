@@ -161,8 +161,8 @@ def save(type_, channel, room_id, user, user_id, message):
     logging.debug('{} {} {} {}'.format(type_, channel, user, message))
     try:
         bot.conn.execute(sa.sql.text('''
-            INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message) VALUES
-                (:type, :created_at, :channel, :room_id, :user, :user_id, :message)
+            INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message, word_count) VALUES
+                (:type, :created_at, :channel, :room_id, :user, :user_id, :message, :word_count)
         '''), {
             'type': type_,
             'created_at': datetime.utcnow(),
@@ -171,6 +171,7 @@ def save(type_, channel, room_id, user, user_id, message):
             'user': user,
             'user_id': user_id,
             'message': message,
+            'word_count': len(message.split(' ')),
         })
     except:
         logging.exception('sql')

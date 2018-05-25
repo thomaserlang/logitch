@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS `logitch`.`entries` (
   `user` VARCHAR(45) NULL,
   `user_id` INT UNSIGNED NULL,
   `message` TEXT NULL,
+  `word_count` INT UNSIGNED NULL,
   PRIMARY KEY (`id`),
   INDEX `ix_entries_channel_user` (`channel` ASC, `user` ASC, `type` ASC))
 ENGINE = InnoDB;
@@ -33,6 +34,9 @@ CREATE TABLE IF NOT EXISTS `logitch`.`user_stats` (
 ENGINE = InnoDB;
 
 
+-- -----------------------------------------------------
+-- Table `logitch`.`modlogs`
+-- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `logitch`.`modlogs` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `created_at` DATETIME NULL,
@@ -45,6 +49,17 @@ CREATE TABLE IF NOT EXISTS `logitch`.`modlogs` (
   `target_user_id` INT NULL,
   PRIMARY KEY (`id`),
   INDEX `ix_modlogs_channel_user` (`channel` ASC, `user` ASC))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `logitch`.`mods`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `logitch`.`mods` (
+  `channel` VARCHAR(45) NOT NULL,
+  `user_id` INT NOT NULL,
+  `user` VARCHAR(45) NULL,
+  PRIMARY KEY (`channel`, `user_id`))
 ENGINE = InnoDB;
 
 USE `logitch`;
@@ -68,3 +83,7 @@ END$$
 
 
 DELIMITER ;
+
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
