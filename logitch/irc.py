@@ -1,17 +1,16 @@
-import bottom, asyncio, logging, random
+import bottom, asyncio, logging, random, aiohttp
 import sqlalchemy as sa
 from datetime import datetime
 from logitch.unpack import rfc2812_handler
 from logitch import config
 
 bot = bottom.Client('a', 0)
-room_mods = {}
-
-bot.pong_check_callback = None
-bot.ping_callback = None
 
 @bot.on('CLIENT_CONNECT')
 async def connect(**kwargs):
+    if not bot.http_session:
+        bot.http_session = aiohttp.ClientSession()
+
     if bot.pong_check_callback:
         bot.pong_check_callback.cancel()
     logging.info('IRC Connecting to {}:{}'.format(config['irc']['host'], config['irc']['port']))
@@ -38,7 +37,8 @@ async def connect(**kwargs):
         future.cancel()
 
     for channel in config['channels']:
-        bot.send('JOIN', channel='#'+channel.strip('#'))
+        bot.send('JOIN', channel='#'+channel)
+        bot.send("PRIVMSG", target='#'+channel, message='/mods')
 
     if bot.pong_check_callback:
         bot.pong_check_callback.cancel()
@@ -82,6 +82,14 @@ async def pong(message, **kwargs):
 def message(nick, target, message, **kwargs):
     save(1, target, kwargs['room-id'], nick, kwargs['user-id'], message)
 
+    if not message.startswith('!'):
+        return
+
+    is_mod = kwargs['mod'] == '1' or nick == target.strip('#')
+    if is_mod and message == '!updatemods':
+        bot.send("PRIVMSG", target=target, message='/mods')
+        bot.send("PRIVMSG", target=target, message='Affirmative, {}'.format(nick))
+
 @bot.on('CLEARCHAT')
 def clearchat(channel, banned_user, **kwargs):
     if 'ban-reason' not in kwargs:
@@ -98,17 +106,53 @@ def clearchat(channel, banned_user, **kwargs):
     save(type_, channel, kwargs['room-id'], banned_user, kwargs['target-user-id'], message)
 
 @bot.on('NOTICE')
-def notice(target, message, **kwargs):
+async def notice(target, message, **kwargs):
+    logging.debug('NOTICE: {}'.format(message))
     if 'msg-id' not in kwargs:
         return
 
     if kwargs['msg-id'] == 'room_mods':
-        a = message.split(':')
+        bot.loop.create_task(save_mods(target, message))
+
+async def save_mods(target, message):
+    a = message.split(':')
+    channel = target.strip('#')
+    if len(a) == 2:
+        mods = [b.strip() for b in a[1].split(',')]
+    else:
         mods = []
-        if len(a) == 2:
-            mods = [b.strip() for b in a[1].split(',')]
-        mods.append(target)
-        room_mods[target] = mods
+    mods.append(channel)
+
+    users = await lookup_usernames(mods)
+    if users == None:
+        return
+    data = []
+    for u in users:
+        data.append({
+            'channel': channel,
+            'user_id': u['id'],
+            'user': u['user'],
+        })
+    bot.conn.execute(sa.sql.text('DELETE FROM mods WHERE channel=:channel;'), {
+        'channel': channel,
+    })
+    bot.conn.execute(
+        sa.sql.text('INSERT INTO mods (channel, user_id, user) VALUES (:channel, :user_id, :user);'), 
+        data
+    )
+
+async def lookup_usernames(usernames):
+    url = 'https://api.twitch.tv/helix/users'
+    params = [('login', name) for name in usernames]
+    headers = {'Authorization': 'Bearer {}'.format(config['token'])}
+    async with bot.http_session.get(url, params=params, headers=headers) as r:
+        if r.status != 200:
+            return None
+        data = await r.json()
+        users = []
+        for d in data['data']:
+            users.append({'id': d['id'], 'user': d['login']})
+        return users
 
 def send_whisper(nick, target, message):
     bot.send('PRIVMSG', target=target, message='/w {} {}'.format(nick, message))
@@ -143,6 +187,9 @@ def main():
         encoding='UTF-8',
         connect_args={'charset': 'utf8mb4'},
     )
+    bot.http_session = None
+    bot.pong_check_callback = None
+    bot.ping_callback = None
     return bot
 
 if __name__ == '__main__':
