@@ -22,30 +22,36 @@ class Handler(Authenticated_handler):
         channel = self.get_argument('channel', '').lower()
         user = self.get_argument('user', '').lower()
         context = self.get_argument('context', None)
+        show_mod_actions_only = self.get_argument('show-mod-actions-only', None)
         logs = []
         sql = None
         args = {}
+        user_stats = None
         if channel:
             if channel not in mod_of_channels:
                 raise web.HTTPError(403, 'You are not a moderator of this channel')
             sql = 'channel=:channel'
             args['channel'] = channel
         if channel and user:
-            sql += ' AND user=:user'
-            args['user'] = user
+            user_stats = self.get_user_stats(channel, user)
+            sql += ' AND user_id=:user_id'
+            args['user_id'] = user_stats['user_id'] if user_stats else 0
         if channel and context:
             sql += ' AND created_at<=:created_at'
-            logging.info(context)
             args['created_at'] = context
+        if channel and show_mod_actions_only=='yes':
+            sql += ' AND type=100'
         if sql and channel:
             logs = self.application.conn.execute(
                 sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;'), 
                 args
             )
+            logs = logs.fetchall()
         self.render('base.html', 
             logs=logs, 
             render_type=self.render_type,
             mod_of_channels=mod_of_channels,
+            user_stats=user_stats,
         )
 
     def render_type(self, type_):
@@ -68,6 +74,26 @@ class Handler(Authenticated_handler):
         rows = q.fetchall()
         return [r['channel'] for r in rows]
 
+    def get_user_stats(self, channel, user):
+        q = self.application.conn.execute(
+            sa.sql.text('''
+                SELECT 
+                    un.user_id,
+                    us.bans,
+                    us.timeouts,
+                    us.purges,
+                    us.chat_messages
+                FROM 
+                    usernames un, user_stats us 
+                WHERE 
+                    un.user=:user AND 
+                    us.channel=:channel AND
+                    us.user_id=un.user_id;
+            '''), 
+            {'channel': channel, 'user': user}
+        )
+        return q.fetchone()
+
 class Login_handler(web.RequestHandler):
 
     def get(self):
@@ -81,6 +107,13 @@ class Login_handler(web.RequestHandler):
                     'scope': '',
                 })
             )
+
+
+class Logout_handler(web.RequestHandler):
+
+    def get(self):
+        self.clear_cookie('data')
+        self.write('Have a nice day!')
 
 class OAuth_handler(web.RequestHandler):
 
@@ -119,6 +152,7 @@ def App():
         [
             (r'/', Handler),
             (r'/login', Login_handler),
+            (r'/logout', Logout_handler),
             (r'/oauth', OAuth_handler),
         ], 
         login_url='/login', 
