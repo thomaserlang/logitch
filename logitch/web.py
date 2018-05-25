@@ -104,7 +104,7 @@ class Login_handler(web.RequestHandler):
                     'client_id': config['client_id'],
                     'response_type': 'code',
                     'redirect_uri': config['redirect_uri'],
-                    'scope': '',
+                    'scope': 'user:read:email',
                 })
             )
 
