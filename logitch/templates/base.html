@@ -55,7 +55,7 @@
         </table>
     {% end %}
     </div>
-    
+
     <table class="table table-dark table-hover">
         <thead><tr>
             <th>Timestamp (UTC)</th>
@@ -74,7 +74,7 @@
             {% set log_id = handler.get_argument('log_id', None) %}
             {% for log in logs %}                
                 <tr id="log-{{log['id']}}" {%if log_id == str(log['id']) %}class="table-success"{%end%}>
-                    <td width="185px"><a href="/?channel={{url_escape(handler.get_argument('channel'))}}&context={{url_escape(str(log['created_at']))}}&log_id={{log['id']}}#log-{{log['id']}}"
+                    <td width="185px"><a href="/?channel={{url_escape(handler.get_argument('channel'))}}&context={{url_escape(str(log['created_at']))}}&log_id={{log['id']}}"
                            title="Show context surrounding this time"
                         >
                         {{log['created_at']}}
