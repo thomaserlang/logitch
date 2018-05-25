@@ -5,6 +5,7 @@ import requests
 import logging
 import random, json
 import sqlalchemy as sa
+from sqlalchemy_aio import ASYNCIO_STRATEGY
 from datetime import datetime
 
 from logitch import config
@@ -26,6 +27,7 @@ class Pubsub():
             pool_recycle=3599,
             encoding='UTF-8',
             connect_args={'charset': 'utf8mb4'},
+            strategy=ASYNCIO_STRATEGY,
         )
 
     async def parse_message(self, message):
@@ -38,14 +40,14 @@ class Pubsub():
             await self.ws.close()
         elif message['type'] == 'MESSAGE':
             m = json.loads(message['data']['message'])
-            await self.log_mod_action(message['data']['topic'], m['data'])
+            self.loop.create_task(self.log_mod_action(message['data']['topic'], m['data']))
 
     async def log_mod_action(self, topic, data):
         if 'moderation_action' not in data:
             return
         c = topic.split('.')
         try:
-            self.conn.execute(sa.sql.text('''
+            await self.conn.execute(sa.sql.text('''
                 INSERT INTO modlogs (created_at, channel, user, user_id, command, args, target_user, target_user_id) VALUES
                     (:created_at, :channel, :user, :user_id, :command, :args, :target_user, :target_user_id)
             '''), {
@@ -60,7 +62,7 @@ class Pubsub():
             }) 
 
             if data['target_user_id']:
-                self.conn.execute(sa.sql.text('''
+                await self.conn.execute(sa.sql.text('''
                     INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message) VALUES
                         (:type, :created_at, :channel, :room_id, :user, :user_id, :message)
                 '''), {
