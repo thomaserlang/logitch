@@ -56,7 +56,7 @@
     </tr></thead>
     <tbody>
         {%if not handler.get_argument('channel', '') %}
-            <tr><td colspan="3"><center>Choose a channel to view logs from</center></td></tr>
+            <tr><td colspan="3"><center>Choose a channel (top left dropdown) to view logs from</center></td></tr>
         {% elif not logs %}
             <tr><td colspan="3"><center>No logs found</center></td></tr>                
         {% end %}
