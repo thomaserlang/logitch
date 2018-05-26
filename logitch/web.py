@@ -47,7 +47,7 @@ class Handler(Authenticated_handler):
                 args
             )
             logs = logs.fetchall()
-        self.render('base.html', 
+        self.render('logs.html', 
             logs=logs, 
             render_type=self.render_type,
             mod_of_channels=mod_of_channels,
@@ -94,9 +94,15 @@ class Handler(Authenticated_handler):
         )
         return q.fetchone()
 
-class Login_handler(web.RequestHandler):
+class Login_handler(Authenticated_handler):
 
     def get(self):
+        if self.current_user:
+            self.redirect('/')
+            return
+        self.render('login.html')
+
+    def post(self):
         if self.current_user:
             self.redirect('/')
         else:
@@ -108,12 +114,11 @@ class Login_handler(web.RequestHandler):
                 })
             )
 
-
 class Logout_handler(web.RequestHandler):
 
     def get(self):
         self.clear_cookie('data')
-        self.write('Have a nice day!')
+        self.redirect('/login')
 
 class OAuth_handler(web.RequestHandler):
 

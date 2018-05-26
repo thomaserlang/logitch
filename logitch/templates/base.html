@@ -1,3 +1,4 @@
+<!doctype html>
 <html>
 <head>
     <title>Logitch</title>
@@ -9,90 +10,9 @@
         .table-success{color:#000;}
         th{text-align: left;}
     </style>
+    {% block head %}{% end %}
 </head>
 <body>
-    <div class="sticky-top">
-    <div style="padding: 10px; background-color:#36c; overflow: hidden;">
-        <form class="form-inline" style="margin:0; float:left;">
-            <select name="channel" class="form-control">
-                <option value="" disabled selected>Choose a channel</option>
-            {% for channel in mod_of_channels %}
-                <option 
-                    value="{{escape(channel)}}" 
-                    {%if channel == handler.get_argument('channel', '') %}selected{% end %}>
-                    {{escape(channel)}}
-                </option>
-            {% end %}
-            </select>
-            <input name="user" class="form-control" type="search" placeholder="User" value="{{escape(handler.get_argument('user', ''))}}" />
-            <button type="submit" class="btn btn-info">Search</button>
-            <div class="form-check" style="color:#fff; margin-left: 10px;">
-                <input 
-                    type="checkbox" 
-                    value="yes" 
-                    name="show-mod-actions-only" 
-                    class="form-check-input" 
-                    id="show_mod_actions_only"
-                    {%if 'yes' == handler.get_argument('show-mod-actions-only', '') %}checked{% end %}
-                >
-                <label class="form-check-label" for="show_mod_actions_only">Show only mod actions</label>
-            </div>
-        </form>
-        <div style="float:right; color:#fff; margin-top: 7px;">
-            {{escape(current_user['user'])}} - <a href="/logout" style="color:orange;">Logout</a>
-        </div>
-    </div>
-
-    {% if user_stats %}
-        <table class="table" style="margin-bottom: 0;">
-            <tr class="table-primary">
-                <td><b>{{escape(handler.get_argument('user', ''))}}</b></td>
-                <td width="20%">Chat messages: {{user_stats['chat_messages']}}</td>
-                <td width="20%">Purges: {{user_stats['purges']}}</td>
-                <td width="20%">Timeouts: {{user_stats['timeouts']}}</td>
-                <td width="20%">Bans: {{user_stats['bans']}}</td>
-            </tr>
-        </table>
-    {% end %}
-    </div>
-
-    <table class="table table-dark table-hover">
-        <thead><tr>
-            <th>Timestamp (UTC)</th>
-            {% if not handler.get_argument('user', '') %}
-                <th>User</th> 
-            {% end %}
-            <th>Message</th>
-        </tr></thead>
-        <tbody>
-            {%if not handler.get_argument('channel', '') %}
-                <tr><td colspan="3"><center>Choose a channel to view logs from</center></td></tr>
-            {% elif not logs %}
-                <tr><td colspan="3"><center>No logs found</center></td></tr>                
-            {% end %}
-
-            {% set log_id = handler.get_argument('log_id', None) %}
-            {% for log in logs %}                
-                <tr id="log-{{log['id']}}" {%if log_id == str(log['id']) %}class="table-success"{%end%}>
-                    <td width="185px"><a href="/?channel={{url_escape(handler.get_argument('channel'))}}&context={{url_escape(str(log['created_at']))}}&log_id={{log['id']}}"
-                           title="Show context surrounding this time"
-                        >
-                        {{log['created_at']}}
-                    </td>
-                    {% if not handler.get_argument('user', '') %}
-                    <td width="150px"><a href="/?channel={{url_escape(handler.get_argument('channel'))}}&user={{url_escape(log['user'])}}">
-                        {{escape(log['user'])}}
-                    </a></td>
-                    {% end %}
-                    <td>{{render_type(log['type'])}} {{escape(log['message'])}}</td>
-                </tr>
-            {% end %}
-        </tbody>
-    </table>
-    {% if logs %}
-    <div style="color:#fff;margin-bottom:20px;text-align:center;">
-        <i>Only the latest 100 messages are shown. I will add a "more" button at some later point.</i>
-    </div>
-    {% end %}
+    {% block body %}{% end %}
 </body>
 </html>
