@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS `logitch`.`entries` (
   `message` TEXT NULL,
   `word_count` INT UNSIGNED NULL,
   PRIMARY KEY (`id`),
-  INDEX `ix_entries_channel_user` (`channel` ASC, `user` ASC, `type` ASC))
+  INDEX `ix_entries_channel_user` (`channel` ASC, `user` ASC, `type` ASC),
+  INDEX `ix_entries_channel_user_id` (`channel` ASC, `user_id` ASC, `type` ASC))
 ENGINE = InnoDB;
 
 
@@ -34,9 +35,6 @@ CREATE TABLE IF NOT EXISTS `logitch`.`user_stats` (
 ENGINE = InnoDB;
 
 
--- -----------------------------------------------------
--- Table `logitch`.`modlogs`
--- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `logitch`.`modlogs` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `created_at` DATETIME NULL,
@@ -52,9 +50,6 @@ CREATE TABLE IF NOT EXISTS `logitch`.`modlogs` (
 ENGINE = InnoDB;
 
 
--- -----------------------------------------------------
--- Table `logitch`.`mods`
--- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `logitch`.`mods` (
   `channel` VARCHAR(45) NOT NULL,
   `user_id` INT NOT NULL,
@@ -83,7 +78,3 @@ END$$
 
 
 DELIMITER ;
-
-SET SQL_MODE=@OLD_SQL_MODE;
-SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
-SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
