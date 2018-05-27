@@ -100,6 +100,9 @@ class Login_handler(Authenticated_handler):
         if self.current_user:
             self.redirect('/')
             return
+        _next = self.get_argument('next', None)
+        if _next:
+            self.set_secure_cookie('next', _next)
         self.render('login.html')
 
     def post(self):
@@ -150,7 +153,11 @@ class OAuth_handler(web.RequestHandler):
             'user': userinfo['login'],
             'access_token': token['access_token'],
         }), expires_days=None)
-        self.redirect('/')
+        _next = self.get_secure_cookie('next')
+        if _next:
+            self.redirect(_next)
+        else:
+            self.redirect('/')
 
 def App():
     return web.Application(
