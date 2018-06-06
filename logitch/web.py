@@ -100,7 +100,8 @@ class Login_handler(Authenticated_handler):
         if self.current_user:
             self.redirect('/')
             return
-        if self.get_secure_cookie('auto_login') == 'true':
+        auto_login = escape.native_str(self.get_secure_cookie('auto_login'))
+        if auto_login == 'true':
             self.signin()
             return
         _next = self.get_argument('next', None)
