@@ -113,7 +113,7 @@ class Login_handler(Authenticated_handler):
                     'client_id': config['client_id'],
                     'response_type': 'code',
                     'redirect_uri': config['redirect_uri'],
-                    'scope': 'user:read:email',
+                    'scope': '',
                 })
             )
 
