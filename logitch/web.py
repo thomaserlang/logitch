@@ -100,6 +100,9 @@ class Login_handler(Authenticated_handler):
         if self.current_user:
             self.redirect('/')
             return
+        if self.get_secure_cookie('auto_login') == 'true':
+            self.signin()
+            return
         _next = self.get_argument('next', None)
         if _next:
             self.set_secure_cookie('next', _next)
@@ -109,18 +112,22 @@ class Login_handler(Authenticated_handler):
         if self.current_user:
             self.redirect('/')
         else:
-            self.redirect('https://id.twitch.tv/oauth2/authorize?'+parse.urlencode({
-                    'client_id': config['client_id'],
-                    'response_type': 'code',
-                    'redirect_uri': config['redirect_uri'],
-                    'scope': '',
-                })
-            )
+            self.signin()
+
+    def signin(self):
+        self.redirect('https://id.twitch.tv/oauth2/authorize?'+parse.urlencode({
+                'client_id': config['client_id'],
+                'response_type': 'code',
+                'redirect_uri': config['redirect_uri'],
+                'scope': '',
+            })
+        )
 
 class Logout_handler(web.RequestHandler):
 
     def get(self):
         self.clear_cookie('data')
+        self.clear_cookie('auto_login')
         self.redirect('/login')
 
 class OAuth_handler(web.RequestHandler):
@@ -145,7 +152,9 @@ class OAuth_handler(web.RequestHandler):
         })
         if response.code != 200:
             logging.error(response.body)
-            self.write('Unable to verify you at Twitch, please try again.')
+            self.clear_cookie('data')
+            self.clear_cookie('auto_login')
+            self.write('Unable to verify you at Twitch, <a href="/login">please try again.</a>')
             return
         userinfo = json.loads(escape.native_str(response.body))
         self.set_secure_cookie('data', json.dumps({
@@ -153,6 +162,7 @@ class OAuth_handler(web.RequestHandler):
             'user': userinfo['login'],
             'access_token': token['access_token'],
         }), expires_days=None)
+        self.set_secure_cookie('auto_login', 'true', expires_days=31)
         _next = self.get_secure_cookie('next')
         if _next:
             self.redirect(_next)
