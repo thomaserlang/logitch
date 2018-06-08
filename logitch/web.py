@@ -100,13 +100,13 @@ class Login_handler(Authenticated_handler):
         if self.current_user:
             self.redirect('/')
             return
+        _next = self.get_argument('next', None)
+        if _next:
+            self.set_secure_cookie('next', _next)
         auto_login = escape.native_str(self.get_secure_cookie('auto_login'))
         if auto_login == 'true':
             self.signin()
             return
-        _next = self.get_argument('next', None)
-        if _next:
-            self.set_secure_cookie('next', _next)
         self.render('login.html')
 
     def post(self):
