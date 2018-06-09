@@ -64,7 +64,7 @@
         {% set log_id = handler.get_argument('log_id', None) %}
         {% for log in logs %}                
             <tr id="log-{{log['id']}}" {%if log_id == str(log['id']) %}class="table-success"{%end%}>
-                <td width="165px"><a href="/?channel={{url_escape(handler.get_argument('channel'))}}&context={{url_escape(str(log['created_at']))}}&log_id={{log['id']}}"
+                <td width="175px"><a href="/?channel={{url_escape(handler.get_argument('channel'))}}&context={{url_escape(str(log['created_at']))}}&log_id={{log['id']}}"
                        title="Show context surrounding this time"
                     >
                     {{log['created_at']}}
