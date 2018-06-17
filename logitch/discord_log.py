@@ -14,6 +14,7 @@ class Client(discord.Client):
     conn = None
 
     async def on_socket_response(self, data):
+        logging.info(data)
         if data['op'] != 0:
             return
         msg = data['d']
@@ -21,8 +22,8 @@ class Client(discord.Client):
         if data['t'] == 'MESSAGE_CREATE':
             await self.conn.execute(sa.sql.text('''
                 INSERT INTO discord_entries 
-                    (id, server_id, channel_id, created_at, message, attachments, user, user_id, user_discriminator) VALUES
-                    (:id, :server_id, :channel_id, :created_at, :message, :attachments, :user, :user_id, :user_discriminator);
+                    (id, server_id, channel_id, created_at, message, attachments, user, user_id, user_discriminator, member_nick) VALUES
+                    (:id, :server_id, :channel_id, :created_at, :message, :attachments, :user, :user_id, :user_discriminator, :member_nick);
             '''), {
                 'id': msg['id'],
                 'server_id': msg['guild_id'],
@@ -33,6 +34,7 @@ class Client(discord.Client):
                 'user': msg['author']['username'],
                 'user_id': msg['author']['id'],
                 'user_discriminator': msg['author']['discriminator'],
+                'member_nick': msg['member']['nick'] if 'nick' in msg['member'] else None
             })
 
         elif data['t'] == 'MESSAGE_UPDATE':

@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS `logitch`.`discord_entries` (
   `user_discriminator` VARCHAR(10) NULL,
   `deleted` ENUM('Y', 'N') NULL DEFAULT 'N',
   `deleted_at` DATETIME NULL,
+  `member_nick` VARCHAR(32) NULL,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
 
