@@ -34,7 +34,7 @@ def discord_log():
     loop = asyncio.get_event_loop()
 
     import logitch.discord_log
-    loop.create_task(logitch.discord_log.start())
+    loop.create_task(logitch.discord_log.start(loop))
 
     loop.run_forever()
 
