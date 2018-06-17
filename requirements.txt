@@ -11,4 +11,3 @@ aiodns==1.1.1
 sqlalchemy_aio==0.12.0
 pymysql==0.8.1
 python-dateutil==2.7.3
-https://github.com/Rapptz/discord.py/archive/607771c4f49a12d984d782883a580e7332359a10.zip
