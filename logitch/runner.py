@@ -14,8 +14,8 @@ def cli(config, log_path, log_level):
         config['logging']['level'] = log_level
 
 @cli.command()
-def log():
-    logger.set_logger('logitch.log')
+def twitch_log():
+    logger.set_logger('twitch_log.log')
 
     loop = asyncio.get_event_loop()
 
@@ -24,6 +24,17 @@ def log():
 
     import logitch.pubsub
     loop.create_task(logitch.pubsub.main().run())
+
+    loop.run_forever()
+
+@cli.command()
+def discord_log():
+    logger.set_logger('discord_log.log')
+
+    loop = asyncio.get_event_loop()
+
+    import logitch.discord_log
+    loop.create_task(logitch.discord_log.start())
 
     loop.run_forever()
 

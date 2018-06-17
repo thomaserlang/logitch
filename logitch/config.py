@@ -17,6 +17,11 @@ config = {
         'use_ssl': True,
     },
     'pubsub_url': 'wss://pubsub-edge.twitch.tv',
+    'discord': {
+        'token': None,
+        'email': None,
+        'password': None,
+    },
     'logging': {
         'level': 'warning',
         'path': None,
