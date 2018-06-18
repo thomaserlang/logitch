@@ -14,7 +14,6 @@ class Client(discord.Client):
     conn = None
 
     async def on_socket_response(self, data):
-        logging.info(data)
         if data['op'] != 0:
             return
         msg = data['d']
