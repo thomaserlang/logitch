@@ -21,6 +21,7 @@ config = {
         'token': None,
         'email': None,
         'password': None,
+        'bot': True,
     },
     'logging': {
         'level': 'warning',

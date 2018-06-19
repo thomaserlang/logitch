@@ -106,11 +106,14 @@ async def start(loop):
         strategy=ASYNCIO_STRATEGY,
     )
     if config['discord']['token']:
-        loop.create_task(client.start(config['token']))
+        loop.create_task(client.start(
+            config['discord']['token'], 
+            bot=config['discord']['bot'],
+        ))
     elif config['discord']['email'] and config['discord']['password']:
         token = await client.email_login(
             config['discord']['email'], 
-            config['discord']['password']
+            config['discord']['password'],
         )
         loop.create_task(client.start(
             token,
