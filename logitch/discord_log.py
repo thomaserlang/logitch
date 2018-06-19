@@ -17,9 +17,10 @@ class Client(discord.Client):
         if data['op'] != 0:
             return
         msg = data['d']
-
         if data['t'] == 'MESSAGE_CREATE':
             if 'content' not in msg:
+                return
+            if msg['type'] != 0:
                 return
             await self.conn.execute(sa.sql.text('''
                 INSERT INTO discord_entries 
@@ -40,6 +41,8 @@ class Client(discord.Client):
 
         elif data['t'] == 'MESSAGE_UPDATE':
             if 'content' not in msg:
+                return
+            if msg['type'] != 0:
                 return
             await self.conn.execute(sa.sql.text('''
                 INSERT INTO discord_entry_versions 
