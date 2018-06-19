@@ -20,6 +20,8 @@ class Client(discord.Client):
         msg = data['d']
 
         if data['t'] == 'MESSAGE_CREATE':
+            if 'content' not in msg:
+                return
             await self.conn.execute(sa.sql.text('''
                 INSERT INTO discord_entries 
                     (id, server_id, channel_id, created_at, message, attachments, user, user_id, user_discriminator, member_nick) VALUES
@@ -38,6 +40,8 @@ class Client(discord.Client):
             })
 
         elif data['t'] == 'MESSAGE_UPDATE':
+            if 'content' not in msg:
+                return
             await self.conn.execute(sa.sql.text('''
                 INSERT INTO discord_entry_versions 
                     (entry_id, created_at, message, attachments) 
