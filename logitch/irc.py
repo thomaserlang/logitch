@@ -37,8 +37,8 @@ async def connect(**kwargs):
     for future in pending:
         future.cancel()
 
-    channels = await get_channels()
-    for c in channels:
+    bot.channels = await get_channels()
+    for c in bot.channels:
         bot.send('JOIN', channel='#'+c['name'])
         bot.send("PRIVMSG", target='#'+c['name'], message='/mods')
 
@@ -128,6 +128,10 @@ async def save_mods(target, message):
     else:
         mods = []
     mods.append(channel)
+    channel_id = None
+    for c in bot.channels:
+        if c['name'].lower() == channel:
+            channel_id = c['channel_id'] 
 
     users = await lookup_usernames(mods)
     if users == None:
@@ -135,15 +139,15 @@ async def save_mods(target, message):
     data = []
     for u in users:
         data.append({
-            'channel': channel,
+            'channel_id': channel_id,
             'user_id': u['id'],
             'user': u['user'],
         })
-    await bot.conn.execute(sa.sql.text('DELETE FROM mods WHERE channel=:channel;'), {
-        'channel': channel,
+    await bot.conn.execute(sa.sql.text('DELETE FROM mods WHERE channel_id=:channel_id;'), {
+        'channel_id': channel_id,
     })
     await bot.conn.execute(
-        sa.sql.text('INSERT INTO mods (channel, user_id, user) VALUES (:channel, :user_id, :user);'), 
+        sa.sql.text('INSERT INTO mods (channel_id, user_id, user) VALUES (:channel_id, :user_id, :user);'), 
         data
     )
 
