@@ -162,17 +162,17 @@ async def lookup_usernames(usernames):
 def send_whisper(nick, target, message):
     bot.send('PRIVMSG', target=target, message='/w {} {}'.format(nick, message))
 
-async def save(type_, channel, room_id, user, user_id, message):
+async def save(type_, channel, channel_id, user, user_id, message):
     logging.debug('{} {} {} {}'.format(type_, channel, user, message))
     try:
         await bot.conn.execute(sa.sql.text('''
-            INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message, word_count) VALUES
-                (:type, :created_at, :channel, :room_id, :user, :user_id, :message, :word_count)
+            INSERT INTO entries (type, created_at, channel, channel_id, user, user_id, message, word_count) VALUES
+                (:type, :created_at, :channel, :channel_id, :user, :user_id, :message, :word_count)
         '''), {
             'type': type_,
             'created_at': datetime.utcnow(),
             'channel': channel[1:],
-            'room_id': room_id,
+            'channel_id': channel_id,
             'user': user,
             'user_id': user_id,
             'message': message,
