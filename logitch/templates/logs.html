@@ -2,8 +2,7 @@
 
 {% block body %}
 <div class="sticky-top">
-<div style="padding: 10px; background-color:#36c;">
-    <div class="row">
+<div class="row" style="padding: 10px; background-color:#36c; margin-right: 0;">
     <div class="col-md-10">
     <form class="form-inline" style="margin:0;">
         <select name="channel" class="form-control">
@@ -37,7 +36,7 @@
     <div class="col-md-2" style="margin-top:7px; text-align: right; color: #fff;">
         {{escape(current_user['user'])}} - <a href="/logout" style="color:orange;">Logout</a>
     </div>
-    </div>
+</div>
 </div>
 
 {% if user_stats %}
