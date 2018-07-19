@@ -190,6 +190,26 @@ class OAuth_handler(web.RequestHandler):
         else:
             self.redirect('/')
 
+class User_suggest_handler(Authenticated_handler):
+
+    def post(self):
+        q = self.application.conn.execute(
+            sa.sql.text('SELECT user, user_id FROM usernames WHERE user LIKE :user LIMIT 5;'), 
+            {'user': self.get_argument('phrase')+'%'}
+        )
+        rows = q.fetchall()
+        users = []
+        for r in rows:
+            users.append({
+                'user': r['user'],
+                'id': r['user_id'],
+            })
+        self.write(json.dumps(users))
+
+    def set_default_headers(self):
+        self.set_header('Cache-Control', 'no-cache, must-revalidate')
+        self.set_header('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
+
 def App():
     return web.Application(
         [
@@ -197,6 +217,7 @@ def App():
             (r'/login', Login_handler),
             (r'/logout', Logout_handler),
             (r'/oauth', OAuth_handler),
+            (r'/user-suggest', User_suggest_handler),
         ], 
         login_url='/login', 
         debug=config['debug'], 

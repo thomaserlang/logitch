@@ -2,8 +2,10 @@
 
 {% block body %}
 <div class="sticky-top">
-<div style="padding: 10px; background-color:#36c; overflow: hidden;">
-    <form class="form-inline" style="margin:0; float:left;">
+<div style="padding: 10px; background-color:#36c;">
+    <div class="row">
+    <div class="col-md-10">
+    <form class="form-inline" style="margin:0;">
         <select name="channel" class="form-control">
             <option value="" disabled selected>Choose a channel</option>
         {% for channel_id in mod_of_channels %}
@@ -16,8 +18,8 @@
             </option>
         {% end %}
         </select>
-        <input name="user" class="form-control" type="search" placeholder="User" value="{{escape(handler.get_argument('user', ''))}}" />
-        <button type="submit" class="btn btn-info">Search</button>
+        <input name="user" id="input-user" class="form-control" type="search" placeholder="User" value="{{escape(handler.get_argument('user', ''))}}" />
+        <button type="submit" class="btn btn-info" style="margin-left:10px;">Search</button>
         <div class="form-check" style="color:#fff; margin-left: 10px;">
             <input 
                 type="checkbox" 
@@ -30,8 +32,10 @@
             <label class="form-check-label" for="show_mod_actions_only">Show only mod actions</label>
         </div>
     </form>
-    <div style="float:right; color:#fff; margin-top: 7px;">
+    </div>
+    <div class="col-md-2" style="margin-top:7px; text-align: right; color: #fff;">
         {{escape(current_user['user'])}} - <a href="/logout" style="color:orange;">Logout</a>
+    </div>
     </div>
 </div>
 
@@ -86,4 +90,36 @@
     <i>Only the latest 100 messages are shown. I will add a "more" button at some later point.</i>
 </div>
 {% end %}
+
+
+<script>
+var options = {
+  url: function(phrase) {
+    return "user-suggest";
+  },
+
+  getValue: function(element) {
+    return element.user;
+  },
+
+  ajaxSettings: {
+    dataType: "json",
+    method: "POST",
+    data: {
+      dataType: "json"
+    }
+  },
+
+  preparePostData: function(data) {
+    data.phrase = $("#input-user").val();
+    return data;
+  },
+
+  requestDelay: 100
+};
+
+$("#input-user").easyAutocomplete(options);
+
+</script>
+
 {% end %}
