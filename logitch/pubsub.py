@@ -12,9 +12,9 @@ from logitch import config
 
 class Pubsub():
 
-    def __init__(self, url, channels, token):
+    def __init__(self, url, token):
         self.url = url
-        self.channels = channels
+        self.channels = []
         self.channel_lookup = {}
         self.token = token
         self.ping_callback = None
@@ -48,10 +48,11 @@ class Pubsub():
         c = topic.split('.')
         try:
             await self.conn.execute(sa.sql.text('''
-                INSERT INTO modlogs (created_at, channel, user, user_id, command, args, target_user, target_user_id) VALUES
-                    (:created_at, :channel, :user, :user_id, :command, :args, :target_user, :target_user_id)
+                INSERT INTO modlogs (created_at, channel_id, channel, user, user_id, command, args, target_user, target_user_id) VALUES
+                    (:created_at, :channel_id, :channel, :user, :user_id, :command, :args, :target_user, :target_user_id)
             '''), {
                 'created_at': datetime.utcnow(),
+                'channel_id': c[2],
                 'channel': self.channel_lookup[c[2]],
                 'user': data['created_by'],
                 'user_id': data['created_by_user_id'],
@@ -63,13 +64,13 @@ class Pubsub():
 
             if data['target_user_id']:
                 await self.conn.execute(sa.sql.text('''
-                    INSERT INTO entries (type, created_at, channel, room_id, user, user_id, message) VALUES
-                        (:type, :created_at, :channel, :room_id, :user, :user_id, :message)
+                    INSERT INTO entries (type, created_at, channel, channel_id, user, user_id, message) VALUES
+                        (:type, :created_at, :channel, :channel_id, :user, :user_id, :message)
                 '''), {
                     'type': 100,
                     'created_at': datetime.utcnow(),
                     'channel': self.channel_lookup[c[2]],
-                    'room_id': c[2],
+                    'channel_id': c[2],
                     'user': data['args'][0],
                     'user_id': data['target_user_id'],
                     'message': '<{}{} (by {})>'.format(
@@ -109,17 +110,14 @@ class Pubsub():
     async def connect(self):
         if self.ping_callback:
             self.ping_callback.cancel()
-        channel_ids = self.lookup_channel_ids()
         current_user_id = self.get_current_user_id()
-
-        for cid, cname in zip(channel_ids, self.channels):
-            self.channel_lookup[cid] = cname
-
+        self.channels = await self.get_channels() 
         topics = []
-        for id_ in channel_ids:
+        for c in self.channels:
+            self.channel_lookup[c['channel_id']] = c['name']
             topics.append('chat_moderator_actions.{}.{}'.format(
                 current_user_id,
-                id_,
+                c['channel_id'],
             ))
         logging.info('PubSub Connecting to {}'.format(config['pubsub_url']))
         self.ws = await websockets.connect(config['pubsub_url'])
@@ -142,19 +140,6 @@ class Pubsub():
         logging.info('closing')
         await self.ws.close()
 
-    def lookup_channel_ids(self):
-        response = requests.get('https://api.twitch.tv/helix/users', 
-            params={
-                'login': self.channels,
-            },
-            headers={
-                'Authorization': 'Bearer {}'.format(self.token),
-            },
-        )
-        if response.status_code != 200:
-            raise Exception(response.text)
-        return [r['id'] for r in response.json()['data']]
-
     def get_current_user_id(self):
         response = requests.get('https://api.twitch.tv/helix/users', 
             headers={
@@ -167,10 +152,20 @@ class Pubsub():
         ids = []
         return response.json()['data'][0]['id']
 
+    async def get_channels(self):
+        q = await self.conn.execute('SELECT channel_id, name FROM channels WHERE active="Y";')
+        rows = await q.fetchall()
+        l = []
+        for r in rows:
+            l.append({
+                'channel_id': r['channel_id'],
+                'name': r['name'].lower(),
+            })
+        return l
+
 def main():
     app = Pubsub(
         url=config['pubsub_url'],
-        channels=config['channels'],
         token=config['token'],
     )
     return app

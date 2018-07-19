@@ -37,9 +37,10 @@ async def connect(**kwargs):
     for future in pending:
         future.cancel()
 
-    for channel in config['channels']:
-        bot.send('JOIN', channel='#'+channel)
-        bot.send("PRIVMSG", target='#'+channel, message='/mods')
+    channels = await get_channels()
+    for c in channels:
+        bot.send('JOIN', channel='#'+c['name'])
+        bot.send("PRIVMSG", target='#'+c['name'], message='/mods')
 
     if bot.pong_check_callback:
         bot.pong_check_callback.cancel()
@@ -180,6 +181,17 @@ async def save(type_, channel, channel_id, user, user_id, message):
         })
     except:
         logging.exception('sql')
+
+async def get_channels():
+    q = await bot.conn.execute('SELECT channel_id, name FROM channels WHERE active="Y";')
+    rows = await q.fetchall()
+    l = []
+    for r in rows:
+        l.append({
+            'channel_id': r['channel_id'],
+            'name': r['name'].lower(),
+        })
+    return l
 
 def main():
     bot.host = config['irc']['host'] 

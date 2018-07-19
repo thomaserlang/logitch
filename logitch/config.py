@@ -5,7 +5,6 @@ config = {
     'user': '',
     'token': '',
     'sql_url': '',
-    'channels': '',
     'client_id': '',
     'client_secret': '',
     'cookie_secret': '',
