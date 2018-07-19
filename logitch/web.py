@@ -20,6 +20,7 @@ class Handler(Authenticated_handler):
     def get(self):
         mod_of_channels = self.get_mod_of_channels()
         channel = self.get_argument('channel', '').lower()
+        channel_id = self.get_argument('channel_id', None)
         user = self.get_argument('user', '').lower()
         context = self.get_argument('context', None)
         show_mod_actions_only = self.get_argument('show-mod-actions-only', None)
@@ -27,26 +28,31 @@ class Handler(Authenticated_handler):
         sql = None
         args = {}
         user_stats = None
+
         if channel:
-            if channel not in mod_of_channels:
+            channel_id = self.get_channel_id(channel)
+            if not channel_id:                
+                raise web.HTTPError(404, 'Unknown channel')
+        if channel_id:
+            if channel_id not in mod_of_channels:
                 raise web.HTTPError(403, 'You are not a moderator of this channel')
-            sql = 'channel=:channel'
-            args['channel'] = channel
-        if channel and user:
-            user_stats = self.get_user_stats(channel, user)
-            sql += ' AND user_id=:user_id'
-            args['user_id'] = user_stats['user_id'] if user_stats else 0
-        if channel and context:
-            sql += ' AND created_at<=:created_at'
-            args['created_at'] = context
-        if channel and show_mod_actions_only=='yes':
-            sql += ' AND type=100'
-        if sql and channel:
-            logs = self.application.conn.execute(
-                sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;'), 
-                args
-            )
-            logs = logs.fetchall()
+            sql = 'channel_id=:channel_id'
+            args['channel_id'] = channel_id
+            if user:
+                user_stats = self.get_user_stats(channel_id, user)
+                sql += ' AND user_id=:user_id'
+                args['user_id'] = user_stats['user_id'] if user_stats else 0
+            if context:
+                sql += ' AND created_at<=:created_at'
+                args['created_at'] = context
+            if show_mod_actions_only=='yes':
+                sql += ' AND type=100'
+            if sql:
+                logs = self.application.conn.execute(
+                    sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;'), 
+                    args
+                )
+                logs = logs.fetchall()
         self.render('logs.html', 
             logs=logs, 
             render_type=self.render_type,
@@ -68,13 +74,17 @@ class Handler(Authenticated_handler):
 
     def get_mod_of_channels(self):
         q = self.application.conn.execute(
-            sa.sql.text('SELECT * FROM mods WHERE user_id=:user_id;'), 
+            sa.sql.text('''SELECT c.channel_id, c.name FROM mods m, channels c WHERE 
+                m.user_id=:user_id AND 
+                c.channel_id=m.channel_id AND
+                c.active='Y';
+            '''), 
             {'user_id': self.current_user['user_id']}
         )
         rows = q.fetchall()
-        return [r['channel'] for r in rows]
+        return {r['channel_id']: r['name'] for r in rows}
 
-    def get_user_stats(self, channel, user):
+    def get_user_stats(self, channel_id, user):
         q = self.application.conn.execute(
             sa.sql.text('''
                 SELECT 
@@ -87,12 +97,22 @@ class Handler(Authenticated_handler):
                     usernames un, user_stats us 
                 WHERE 
                     un.user=:user AND 
-                    us.channel=:channel AND
+                    us.channel_id=:channel_id AND
                     us.user_id=un.user_id;
             '''), 
-            {'channel': channel, 'user': user}
+            {'channel_id': channel_id, 'user': user}
         )
         return q.fetchone()
+
+    def get_channel_id(self, channel):
+        q = self.application.conn.execute(
+            sa.sql.text('SELECT channel_id FROM channels WHERE name=:channel;'), 
+            {'channel': channel}
+        )
+        r = q.fetchone()
+        if not r:
+            return
+        return r['channel_id']
 
 class Login_handler(Authenticated_handler):
 

@@ -6,11 +6,13 @@
     <form class="form-inline" style="margin:0; float:left;">
         <select name="channel" class="form-control">
             <option value="" disabled selected>Choose a channel</option>
-        {% for channel in mod_of_channels %}
+        {% for channel_id in mod_of_channels %}
             <option 
-                value="{{escape(channel)}}" 
-                {%if channel == handler.get_argument('channel', '') %}selected{% end %}>
-                {{escape(channel)}}
+                value="{{escape(mod_of_channels[channel_id])}}" 
+                {%if mod_of_channels[channel_id] == handler.get_argument('channel', '') %}selected{% end %}
+                {%if str(channel_id) == handler.get_argument('channel_id', '') %}selected{% end %}
+                >
+                {{escape(mod_of_channels[channel_id])}}
             </option>
         {% end %}
         </select>
