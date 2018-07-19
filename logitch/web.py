@@ -23,6 +23,7 @@ class Handler(Authenticated_handler):
         channel_id = self.get_argument('channel_id', None)
         user = self.get_argument('user', '').lower()
         context = self.get_argument('context', None)
+        message = self.get_argument('message', '')
         show_mod_actions_only = self.get_argument('show-mod-actions-only', None)
         logs = []
         sql = None
@@ -45,8 +46,11 @@ class Handler(Authenticated_handler):
             if context:
                 sql += ' AND created_at<=:created_at'
                 args['created_at'] = context
-            if show_mod_actions_only=='yes':
+            if show_mod_actions_only == 'yes':
                 sql += ' AND type=100'
+            if message:
+                sql += ' AND message LIKE :message'
+                args['message'] =  '%' + message + '%'
             if sql:
                 logs = self.application.conn.execute(
                     sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;'), 

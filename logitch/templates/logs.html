@@ -19,7 +19,8 @@
         {% end %}
         </select>
         <input name="user" id="input-user" class="form-control" type="search" placeholder="User" value="{{escape(handler.get_argument('user', ''))}}" />
-        <button type="submit" class="btn btn-info" style="margin-left:10px;">Search</button>
+        <input name="message" class="form-control" type="text" placeholder="Message" value="{{escape(handler.get_argument('message', ''))}}" style="margin-left:10px;" />
+        <button type="submit" class="btn btn-info">Search</button>
         <div class="form-check" style="color:#fff; margin-left: 10px;">
             <input 
                 type="checkbox" 
