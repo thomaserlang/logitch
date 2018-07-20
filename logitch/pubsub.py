@@ -53,7 +53,7 @@ class Pubsub():
             '''), {
                 'created_at': datetime.utcnow(),
                 'channel_id': c[2],
-                'channel': self.channel_lookup[c[2]],
+                'channel': self.channel_lookup[int(c[2])],
                 'user': data['created_by'],
                 'user_id': data['created_by_user_id'],
                 'command': data['moderation_action'],
@@ -69,7 +69,7 @@ class Pubsub():
                 '''), {
                     'type': 100,
                     'created_at': datetime.utcnow(),
-                    'channel': self.channel_lookup[c[2]],
+                    'channel': self.channel_lookup[int(c[2])],
                     'channel_id': c[2],
                     'user': data['args'][0],
                     'user_id': data['target_user_id'],
