@@ -1,12 +1,15 @@
-import logging
-import json
-import os
-import sqlalchemy as sa
+import logging, json, os
 from tornado import web, ioloop, httpclient, escape
 from urllib import parse
-from logitch import config
+from logitch import config, db
 
-class Authenticated_handler(web.RequestHandler):
+class Base_handler(web.RequestHandler):
+
+    @property
+    def db(self):
+        return self.application.db
+
+class Authenticated_handler(Base_handler):
 
     def get_current_user(self):
         data = self.get_secure_cookie('data', max_age_days=0.14)
@@ -17,8 +20,8 @@ class Authenticated_handler(web.RequestHandler):
 class Handler(Authenticated_handler):
 
     @web.authenticated
-    def get(self):
-        mod_of_channels = self.get_mod_of_channels()
+    async def get(self):
+        mod_of_channels = await self.get_mod_of_channels()
         channel = self.get_argument('channel', '').lower()
         channel_id = self.get_argument('channel_id', None)
         user = self.get_argument('user', '').lower()
@@ -27,36 +30,35 @@ class Handler(Authenticated_handler):
         show_mod_actions_only = self.get_argument('show-mod-actions-only', None)
         logs = []
         sql = None
-        args = {}
+        args = []
         user_stats = None
 
         if channel:
-            channel_id = self.get_channel_id(channel)
+            channel_id = await self.get_channel_id(channel)
             if not channel_id:                
                 raise web.HTTPError(404, 'Unknown channel')
         if channel_id:
             if channel_id not in mod_of_channels:
                 raise web.HTTPError(403, 'You are not a moderator of this channel')
-            sql = 'channel_id=:channel_id'
-            args['channel_id'] = channel_id
+            sql = 'channel_id=%s'
+            args.append(channel_id)
             if user:
-                user_stats = self.get_user_stats(channel_id, user)
-                sql += ' AND user_id=:user_id'
-                args['user_id'] = user_stats['user_id'] if user_stats else 0
+                user_stats = await self.get_user_stats(channel_id, user)
+                sql += ' AND user_id=%s'
+                args.append(user_stats['user_id'] if user_stats else 0)
             if context:
-                sql += ' AND created_at<=:created_at'
-                args['created_at'] = context
+                sql += ' AND created_at<=%s'
+                args.append(context)
             if show_mod_actions_only == 'yes':
                 sql += ' AND type=100'
             if message:
-                sql += ' AND message LIKE :message'
-                args['message'] =  '%' + message + '%'
+                sql += ' AND message LIKE %s'
+                args.append('%' + message + '%')
             if sql:
-                logs = self.application.conn.execute(
-                    sa.sql.text('SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;'), 
+                logs = await self.db.fetchall(
+                    'SELECT id, created_at, type, user, message FROM entries WHERE '+sql+' ORDER BY id DESC LIMIT 100;', 
                     args
                 )
-                logs = logs.fetchall()
         self.render('logs.html', 
             logs=logs, 
             render_type=self.render_type,
@@ -76,21 +78,20 @@ class Handler(Authenticated_handler):
         if type_ == 100:
             return '<span class="badge badge-success" title="An action by a mod concerning this user.">M</span>'
 
-    def get_mod_of_channels(self):
-        q = self.application.conn.execute(
-            sa.sql.text('''SELECT c.channel_id, c.name FROM mods m, channels c WHERE 
-                m.user_id=:user_id AND 
+    async def get_mod_of_channels(self):
+        rows = await self.db.fetchall(
+            '''SELECT c.channel_id, c.name FROM mods m, channels c WHERE 
+                m.user_id=%s AND 
                 c.channel_id=m.channel_id AND
                 c.active='Y';
-            '''), 
-            {'user_id': self.current_user['user_id']}
+            ''', 
+            (self.current_user['user_id'],)
         )
-        rows = q.fetchall()
         return {r['channel_id']: r['name'] for r in rows}
 
-    def get_user_stats(self, channel_id, user):
-        q = self.application.conn.execute(
-            sa.sql.text('''
+    async def get_user_stats(self, channel_id, user):
+        q = await self.db.fetchone(
+            '''
                 SELECT 
                     un.user_id,
                     us.bans,
@@ -100,20 +101,18 @@ class Handler(Authenticated_handler):
                 FROM 
                     usernames un, user_stats us 
                 WHERE 
-                    un.user=:user AND 
-                    us.channel_id=:channel_id AND
+                    un.user=%s AND 
+                    us.channel_id=%s AND
                     us.user_id=un.user_id;
-            '''), 
-            {'channel_id': channel_id, 'user': user}
+            ''', (user, channel_id)
         )
-        return q.fetchone()
+        return q
 
-    def get_channel_id(self, channel):
-        q = self.application.conn.execute(
-            sa.sql.text('SELECT channel_id FROM channels WHERE name=:channel;'), 
-            {'channel': channel}
+    async def get_channel_id(self, channel):
+        r = await self.db.fetchone(
+            'SELECT channel_id FROM channels WHERE name=%s;', 
+            (channel,)
         )
-        r = q.fetchone()
         if not r:
             return
         return r['channel_id']
@@ -148,14 +147,14 @@ class Login_handler(Authenticated_handler):
             })
         )
 
-class Logout_handler(web.RequestHandler):
+class Logout_handler(Base_handler):
 
     def get(self):
         self.clear_cookie('data')
         self.clear_cookie('auto_login')
         self.redirect('/login')
 
-class OAuth_handler(web.RequestHandler):
+class OAuth_handler(Base_handler):
 
     async def get(self):
         code = self.get_argument('code')
@@ -172,6 +171,7 @@ class OAuth_handler(web.RequestHandler):
             self.write('Unable to verify you at Twitch, please try again.')
             return
         token = json.loads(escape.native_str(response.body))
+        logging.info(token)
         response = await http.fetch('https://id.twitch.tv/oauth2/validate', headers={
             'Authorization': 'OAuth {}'.format(token['access_token'])
         })
@@ -196,12 +196,11 @@ class OAuth_handler(web.RequestHandler):
 
 class User_suggest_handler(Authenticated_handler):
 
-    def post(self):
-        q = self.application.conn.execute(
-            sa.sql.text('SELECT user, user_id FROM usernames WHERE user LIKE :user LIMIT 5;'), 
-            {'user': self.get_argument('phrase')+'%'}
+    async def post(self):
+        rows = await self.db.fetchall(
+            'SELECT user, user_id FROM usernames WHERE user LIKE %s LIMIT 5;', 
+            (self.get_argument('phrase')+'%',)
         )
-        rows = q.fetchall()
         users = []
         for r in rows:
             users.append({
@@ -233,14 +232,12 @@ def App():
 def main():
     app = App()
     app.listen(config['web_port'])
-    app.conn = sa.create_engine(config['sql_url'],
-        convert_unicode=True,
-        echo=False,
-        pool_recycle=3599,
-        encoding='UTF-8',
-        connect_args={'charset': 'utf8mb4'},
-    )
-    ioloop.IOLoop.current().start()
+    loop = ioloop.IOLoop.current()
+    loop.add_callback(db_connect, app)
+    loop.start()
+
+async def db_connect(app):
+    app.db = await db.Db().connect(None)
 
 if __name__ == '__main__':
     from logitch import config_load, logger

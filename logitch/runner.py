@@ -30,13 +30,7 @@ def twitch_log():
 @cli.command()
 def discord_log():
     logger.set_logger('discord_log.log')
-
-    loop = asyncio.get_event_loop()
-
-    import logitch.discord_log
-    loop.create_task(logitch.discord_log.start(loop))
-
-    loop.run_forever()
+    logitch.discord_log.main()
 
 @cli.command()
 def web():

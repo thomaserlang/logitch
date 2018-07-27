@@ -1,14 +1,6 @@
-import asyncio
-import websockets
-import functools
-import requests
-import logging
-import random, json
-import sqlalchemy as sa
-from sqlalchemy_aio import ASYNCIO_STRATEGY
+import asyncio, websockets, functools, requests, logging, random, json
 from datetime import datetime
-
-from logitch import config
+from logitch import config, db
 
 class Pubsub():
 
@@ -21,14 +13,6 @@ class Pubsub():
         self.pong_check_callback = None
         self.ws = None
         self.loop = asyncio.get_event_loop()
-        self.conn = sa.create_engine(config['sql_url'],
-            convert_unicode=True,
-            echo=False,
-            pool_recycle=3599,
-            encoding='UTF-8',
-            connect_args={'charset': 'utf8mb4'},
-            strategy=ASYNCIO_STRATEGY,
-        )
 
     async def parse_message(self, message):
         logging.debug(message)
@@ -47,42 +31,43 @@ class Pubsub():
             return
         c = topic.split('.')
         try:
-            await self.conn.execute(sa.sql.text('''
+            await self.db.execute('''
                 INSERT INTO modlogs (created_at, channel_id, channel, user, user_id, command, args, target_user, target_user_id) VALUES
-                    (:created_at, :channel_id, :channel, :user, :user_id, :command, :args, :target_user, :target_user_id)
-            '''), {
-                'created_at': datetime.utcnow(),
-                'channel_id': c[2],
-                'channel': self.channel_lookup[int(c[2])],
-                'user': data['created_by'],
-                'user_id': data['created_by_user_id'],
-                'command': data['moderation_action'],
-                'args': ' '.join(data['args']).strip() if data['args'] else '',
-                'target_user': data['args'][0] if data['target_user_id'] else None,
-                'target_user_id': data['target_user_id'] if data['target_user_id'] else None,
-            }) 
+                    (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                datetime.utcnow(),
+                c[2],
+                self.channel_lookup[int(c[2])],
+                data['created_by'],
+                data['created_by_user_id'],
+                data['moderation_action'],
+                ' '.join(data['args']).strip() if data['args'] else '',
+                data['args'][0] if data['target_user_id'] else None,
+                data['target_user_id'] if data['target_user_id'] else None,
+            )) 
 
             if data['target_user_id']:
-                await self.conn.execute(sa.sql.text('''
+                await self.db.execute('''
                     INSERT INTO entries (type, created_at, channel, channel_id, user, user_id, message) VALUES
-                        (:type, :created_at, :channel, :channel_id, :user, :user_id, :message)
-                '''), {
-                    'type': 100,
-                    'created_at': datetime.utcnow(),
-                    'channel': self.channel_lookup[int(c[2])],
-                    'channel_id': c[2],
-                    'user': data['args'][0],
-                    'user_id': data['target_user_id'],
-                    'message': '<{}{} (by {})>'.format(
+                        (%s, %s, %s, %s, %s, %s, %s)
+                ''', (
+                    100,
+                    datetime.utcnow(),
+                    self.channel_lookup[int(c[2])],
+                    c[2],
+                    data['args'][0],
+                    data['target_user_id'],
+                    '<{}{} (by {})>'.format(
                         data['moderation_action'],
                         ' '+' '.join(data['args']).strip() if data['args'] else '',
                         data['created_by'],
                     ),
-                }) 
+                )) 
         except:
             logging.exception('log_mod_action')
 
     async def run(self):
+        self.db = await db.Db().connect(self.loop)
         while True:
             if self.ws:
                 self.ws.close()
@@ -105,7 +90,6 @@ class Pubsub():
             except:
                 logging.exception('Loop 1')
                 await asyncio.sleep(10)
-
 
     async def connect(self):
         if self.ping_callback:
@@ -153,8 +137,7 @@ class Pubsub():
         return response.json()['data'][0]['id']
 
     async def get_channels(self):
-        q = await self.conn.execute('SELECT channel_id, name FROM channels WHERE active="Y";')
-        rows = await q.fetchall()
+        rows = await self.db.fetchall('SELECT channel_id, name FROM channels WHERE active="Y";')
         l = []
         for r in rows:
             l.append({

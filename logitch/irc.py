@@ -1,9 +1,7 @@
 import bottom, asyncio, logging, random, aiohttp
-import sqlalchemy as sa
-from sqlalchemy_aio import ASYNCIO_STRATEGY
 from datetime import datetime
 from logitch.unpack import rfc2812_handler
-from logitch import config
+from logitch import config, db
 
 bot = bottom.Client('a', 0)
 
@@ -11,6 +9,8 @@ bot = bottom.Client('a', 0)
 async def connect(**kwargs):
     if not bot.http_session:
         bot.http_session = aiohttp.ClientSession()
+    if not bot.db:
+        bot.db = await db.Db().connect(bot.loop)
 
     if bot.pong_check_callback:
         bot.pong_check_callback.cancel()
@@ -138,16 +138,16 @@ async def save_mods(target, message):
         return
     data = []
     for u in users:
-        data.append({
-            'channel_id': channel_id,
-            'user_id': u['id'],
-            'user': u['user'],
-        })
-    await bot.conn.execute(sa.sql.text('DELETE FROM mods WHERE channel_id=:channel_id;'), {
-        'channel_id': channel_id,
-    })
-    await bot.conn.execute(
-        sa.sql.text('INSERT INTO mods (channel_id, user_id, user) VALUES (:channel_id, :user_id, :user);'), 
+        data.append((
+            channel_id,
+            u['id'],
+            u['user'],
+        ))
+    await bot.db.execute('DELETE FROM mods WHERE channel_id=%s;', 
+        (channel_id,)
+    )
+    await bot.db.executemany(
+        'INSERT INTO mods (channel_id, user_id, user) VALUES (%s, %s, %s);', 
         data
     )
 
@@ -170,25 +170,24 @@ def send_whisper(nick, target, message):
 async def save(type_, channel, channel_id, user, user_id, message):
     logging.debug('{} {} {} {}'.format(type_, channel, user, message))
     try:
-        await bot.conn.execute(sa.sql.text('''
+        await bot.db.execute('''
             INSERT INTO entries (type, created_at, channel, channel_id, user, user_id, message, word_count) VALUES
-                (:type, :created_at, :channel, :channel_id, :user, :user_id, :message, :word_count)
-        '''), {
-            'type': type_,
-            'created_at': datetime.utcnow(),
-            'channel': channel[1:],
-            'channel_id': channel_id,
-            'user': user,
-            'user_id': user_id,
-            'message': message,
-            'word_count': len(message.split(' ')),
-        })
+                (%s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            type_,
+            datetime.utcnow(),
+            channel[1:],
+            channel_id,
+            user,
+            user_id,
+            message,
+            len(message.split(' ')),
+        ))
     except:
         logging.exception('sql')
 
 async def get_channels():
-    q = await bot.conn.execute('SELECT channel_id, name FROM channels WHERE active="Y";')
-    rows = await q.fetchall()
+    rows = await bot.db.fetchall('SELECT channel_id, name FROM channels WHERE active="Y";')
     l = []
     for r in rows:
         l.append({
@@ -202,22 +201,15 @@ def main():
     bot.port = config['irc']['port'] 
     bot.ssl = config['irc']['use_ssl']
     bot.raw_handlers = [rfc2812_handler(bot)]
-    bot.conn = sa.create_engine(config['sql_url'],
-        convert_unicode=True,
-        echo=False,
-        pool_recycle=3599,
-        encoding='UTF-8',
-        connect_args={'charset': 'utf8mb4'},
-        strategy=ASYNCIO_STRATEGY,
-    )
     bot.http_session = None
+    bot.db = None
     bot.pong_check_callback = None
     bot.ping_callback = None
     return bot
 
 if __name__ == '__main__':
     from logitch import config_load, logger
-    config_load()    
+    config_load('../logitch.yaml')
     logger.set_logger('irc.log')
     loop = asyncio.get_event_loop()
     loop.create_task(main().connect())    
