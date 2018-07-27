@@ -30,6 +30,7 @@ def twitch_log():
 @cli.command()
 def discord_log():
     logger.set_logger('discord_log.log')
+    import logitch.discord_log
     logitch.discord_log.main()
 
 @cli.command()
