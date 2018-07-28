@@ -171,7 +171,6 @@ class OAuth_handler(Base_handler):
             self.write('Unable to verify you at Twitch, please try again.')
             return
         token = json.loads(escape.native_str(response.body))
-        logging.info(token)
         response = await http.fetch('https://id.twitch.tv/oauth2/validate', headers={
             'Authorization': 'OAuth {}'.format(token['access_token'])
         })
