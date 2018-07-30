@@ -124,8 +124,9 @@ class Login_handler(Authenticated_handler):
             self.redirect('/')
             return
         _next = self.get_argument('next', None)
+        self.clear_cookie('next')
         if _next:
-            self.set_secure_cookie('next', _next)
+            self.set_secure_cookie('next', _next, expires_days=None)
         auto_login = escape.native_str(self.get_secure_cookie('auto_login'))
         if auto_login == 'true':
             self.signin()
@@ -188,6 +189,7 @@ class OAuth_handler(Base_handler):
         }), expires_days=None)
         self.set_secure_cookie('auto_login', 'true', expires_days=31)
         _next = self.get_secure_cookie('next')
+        self.clear_cookie('next')
         if _next:
             self.redirect(_next)
         else:
