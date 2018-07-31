@@ -14,7 +14,7 @@ class Db():
             loop=loop,
             charset='utf8mb4',
             use_unicode=True,
-            echo=True,
+            echo=False,
             autocommit=False,
         )
         return self
