@@ -31,6 +31,7 @@ class Db():
                 await c.connection.ping()        
                 await c.execute(*args, **kwargs)
                 r = await c.fetchone()
+                await c.connection.commit()
                 return r 
 
     async def fetchall(self, *args, **kwargs):
@@ -45,6 +46,7 @@ class Db():
                 await c.connection.ping()            
                 await c.execute(*args, **kwargs)
                 r = await c.fetchall()
+                await c.connection.commit()
 
     async def execute(self, *args, **kwargs):
         async with cursor(self.pool) as c:
