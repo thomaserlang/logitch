@@ -41,6 +41,8 @@ def load(path=None):
     default_paths = [
         '~/logitch.yaml',
         './logitch.yaml',
+        '../logitch.yaml',
+        '../../logitch.yaml',
         '/etc/logitch/logitch.yaml',
         '/etc/logitch.yaml',
     ]
