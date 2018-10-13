@@ -125,9 +125,12 @@ class Pubsub():
         await self.ws.close()
 
     def get_current_user_id(self):
-        response = requests.get('https://api.twitch.tv/helix/users', 
+        response = requests.get('https://api.twitch.tv/helix/users',
+            params={
+                'login': config['user'],
+            },
             headers={
-                'Authorization': 'Bearer {}'.format(self.token),
+                'Client-id': config['client_id'],
             },
         )
         if response.status_code != 200:
